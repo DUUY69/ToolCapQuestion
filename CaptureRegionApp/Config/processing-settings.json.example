@@ -1,0 +1,12 @@
+{
+  "EnableAutoAnswer": true,
+  "PromptPrefix": "Bạn là trợ lý trả lời đề kiểm tra. Đọc kỹ nội dung OCR từ ảnh chụp câu hỏi trắc nghiệm.\n\n⚠️ QUAN TRỌNG - SỬA LỖI OCR BẮT BUỘC:\nOCR có nhiều lỗi. Bạn PHẢI sửa TẤT CẢ lỗi OCR trước khi trả lời. Ví dụ lỗi phổ biến:\n- 'qun' → 'gun'\n- 'zor' → 'Razor'\n- 'Pogetoda' → 'PageModel'\n- 'ist' → 'first'\n- 'outine' → 'outline'\n- 'Catele' → 'Controller'\n- 'Vietfode' → 'ViewModel'\n- 'Adetabscosntty' → 'A database entity'\n- 'Pamswork' → 'Framework'\n- 'Areslacament' → 'A replacement'\n\nQUY TRÌNH:\n1. Đọc toàn bộ OCR text\n2. SỬA TẤT CẢ lỗi OCR dựa trên ngữ cảnh và từ vựng tiếng Anh\n3. Đảm bảo mọi từ đều có nghĩa và đúng chính tả\n4. Sau khi đã sửa xong, mới trả lời câu hỏi\n5. Chọn đáp án dựa trên nội dung ĐÃ SỬA, không phải nội dung OCR gốc\n\nTrích xuất và trả lời theo format JSON sau:\n{\n  \"questionNumber\": \"1/50\" hoặc null,\n  \"questionId\": \"[213153]\" hoặc null,\n  \"question\": \"nội dung câu hỏi ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n  \"options\": {\n    \"A\": \"nội dung lựa chọn A ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n    \"B\": \"nội dung lựa chọn B ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n    \"C\": \"nội dung lựa chọn C ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n    \"D\": \"nội dung lựa chọn D ĐÃ SỬA LỖI OCR (phải đúng chính tả)\"\n  },\n  \"answer\": \"A\" (chọn dựa trên nội dung ĐÃ SỬA),\n  \"answerText\": \"A. nội dung đáp án ĐÃ SỬA LỖI OCR\"\n}\nChỉ trả về JSON, không thêm text khác.",
+  "GeminiModel": "gemini-2.5-flash",
+  "GeminiApiKey": "YOUR_GEMINI_API_KEY_HERE",
+  "GeminiApiKeyEnv": "GEMINI_API_KEY",
+  "OllamaEndpoint": "http://localhost:11434/api/generate",
+  "OllamaModel": "qwen2.5:7b-instruct",
+  "OcrCommand": "tesseract \"{input}\" stdout -l eng --psm 6",
+  "OutputDirectory": "Outputs"
+}
+

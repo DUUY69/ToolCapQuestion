@@ -1,0 +1,18 @@
+{
+  "OverlayOpacity": 0.2,
+  "OverlayColorHex": "#000000",
+  "SelectionLineColorHex": "#ff0000",
+  "SelectionLineWidth": 2.0,
+  "OutputDirectory": "Captures",
+  "FileNameFormat": "capture_{0:yyyyMMdd_HHmmss}.png",
+  "PixelFormatName": "Format32bppArgb",
+  "ShowSavedDialog": false,
+  "Hotkey": "Ctrl+Q",
+  "FixedRegionHotkey": "Ctrl+W",
+  "FixedRegionConfirmHotkey": "Ctrl+E",
+  "FixedRegionX": 0,
+  "FixedRegionY": 0,
+  "FixedRegionWidth": 400,
+  "FixedRegionHeight": 200
+}
+
