@@ -39,6 +39,9 @@ public sealed class CapturePipeline
     private static readonly System.Collections.Generic.HashSet<string> _processedFiles = new();
     private static readonly HashSet<string> _contentHashes = new(StringComparer.OrdinalIgnoreCase);
     private static readonly HashSet<string> _imageHashes = new(StringComparer.OrdinalIgnoreCase); // Hash của ảnh (SHA256) để check trùng ảnh
+    private static readonly HashSet<string> _questionIds = new(StringComparer.OrdinalIgnoreCase); // Id câu hỏi lấy từ OCR ([123456])
+    private static readonly HashSet<string> _questionNumbers = new(StringComparer.OrdinalIgnoreCase); // Số thứ tự câu hỏi (vd: 1/50, 12:33)
+    private static readonly object _metaLock = new();
 
     public CapturePipeline(ProcessingSettings settings)
     {
@@ -299,6 +302,21 @@ public sealed class CapturePipeline
                 return;
             }
 
+            // Dedup dựa trên meta OCR (stt/id) để tiết kiệm token AI, ưu tiên dùng khi hệ thống thi đã hiện sẵn số câu & id
+            var meta = ExtractQuestionMeta(item.OcrText);
+            if (IsDuplicateByMeta(meta.QuestionId, meta.QuestionNumber))
+            {
+                _logger.Log($"[Dedup] Bỏ qua vì trùng stt/id OCR (id={meta.QuestionId ?? "-"}, stt={meta.QuestionNumber ?? "-"}) cho {item.ImagePath}");
+                TryDeleteFile(item.ImagePath);
+                var marker = Path.Combine(_settings.GetOutputDirectory(), $"{Path.GetFileNameWithoutExtension(item.ImagePath)}.processed");
+                TryDeleteFile(marker);
+                var ocrJsonPath = Path.Combine(_settings.GetOutputDirectory(), $"{Path.GetFileNameWithoutExtension(item.ImagePath)}_ocr.json");
+                TryDeleteFile(ocrJsonPath);
+                return;
+            }
+            // Ghi nhận meta đã thấy để các frame sau trùng stt/id sẽ bị bỏ qua
+            RememberMeta(meta.QuestionId, meta.QuestionNumber);
+
             // HARD GATE: nếu OCR không hề có cấu trúc lựa chọn A/B/C/D → không gọi AI để tránh đoán bừa
             if (!HasEnoughOptionsForAi(item.OcrText))
             {
@@ -351,14 +369,14 @@ public sealed class CapturePipeline
                 // Bổ sung QuestionNumber/QuestionId nếu AI chưa trả về nhưng OCR có
                 if (string.IsNullOrWhiteSpace(parsed.QuestionNumber) || string.IsNullOrWhiteSpace(parsed.QuestionId))
                 {
-                    var meta = ExtractQuestionMeta(item.OcrText);
-                    if (string.IsNullOrWhiteSpace(parsed.QuestionNumber) && !string.IsNullOrWhiteSpace(meta.QuestionNumber))
+                    var metaFromOcr = ExtractQuestionMeta(item.OcrText);
+                    if (string.IsNullOrWhiteSpace(parsed.QuestionNumber) && !string.IsNullOrWhiteSpace(metaFromOcr.QuestionNumber))
                     {
-                        parsed.QuestionNumber = meta.QuestionNumber;
+                        parsed.QuestionNumber = metaFromOcr.QuestionNumber;
                     }
-                    if (string.IsNullOrWhiteSpace(parsed.QuestionId) && !string.IsNullOrWhiteSpace(meta.QuestionId))
+                    if (string.IsNullOrWhiteSpace(parsed.QuestionId) && !string.IsNullOrWhiteSpace(metaFromOcr.QuestionId))
                     {
-                        parsed.QuestionId = meta.QuestionId;
+                        parsed.QuestionId = metaFromOcr.QuestionId;
                     }
                 }
                 // Nếu AI chỉ trả về mỗi đáp án (ví dụ: \"B. No\") mà không có question/options,
@@ -1377,6 +1395,89 @@ public sealed class CapturePipeline
         }
 
         return (questionNumber, questionId);
+    }
+
+    private bool IsDuplicateByMeta(string? questionId, string? questionNumber)
+    {
+        // Nếu không có meta thì không dùng rule này
+        if (string.IsNullOrWhiteSpace(questionId) && string.IsNullOrWhiteSpace(questionNumber))
+        {
+            return false;
+        }
+
+        // Check trong bộ nhớ
+        lock (_metaLock)
+        {
+            if (!string.IsNullOrWhiteSpace(questionId) && _questionIds.Contains(questionId))
+            {
+                return true;
+            }
+            if (!string.IsNullOrWhiteSpace(questionNumber) && _questionNumbers.Contains(questionNumber))
+            {
+                return true;
+            }
+        }
+
+        // Check trên các file kết quả đã lưu để tránh xử lý lại sau khi restart
+        try
+        {
+            var outputDir = _settings.GetOutputDirectory();
+            if (Directory.Exists(outputDir))
+            {
+                var jsonFiles = Directory.GetFiles(outputDir, "*_result.json", SearchOption.TopDirectoryOnly);
+                foreach (var jsonFile in jsonFiles)
+                {
+                    try
+                    {
+                        var json = File.ReadAllText(jsonFile);
+                        var existing = JsonSerializer.Deserialize<AnswerResult>(json);
+                        if (existing == null) continue;
+
+                        if (!string.IsNullOrWhiteSpace(questionId) &&
+                            string.Equals(existing.QuestionId, questionId, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(questionNumber) &&
+                            string.Equals(existing.QuestionNumber, questionNumber, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return true;
+                        }
+                    }
+                    catch
+                    {
+                        // Bỏ qua file lỗi
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // ignore
+        }
+
+        return false;
+    }
+
+    private void RememberMeta(string? questionId, string? questionNumber)
+    {
+        if (string.IsNullOrWhiteSpace(questionId) && string.IsNullOrWhiteSpace(questionNumber))
+        {
+            return;
+        }
+
+        lock (_metaLock)
+        {
+            if (!string.IsNullOrWhiteSpace(questionId))
+            {
+                _questionIds.Add(questionId);
+            }
+            if (!string.IsNullOrWhiteSpace(questionNumber))
+            {
+                _questionNumbers.Add(questionNumber);
+            }
+        }
     }
 
     private static void TryDeleteFile(string path)

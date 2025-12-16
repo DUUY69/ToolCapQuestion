@@ -304,8 +304,7 @@ public sealed class ControlPanelForm : Form
 
         // Tab cấu hình
         (_capOutputDir, _capFileFormat, _capHotkey, _capFixedHotkey, _capConfirmHotkey, _capX, _capY, _capW, _capH,
-            _procEnableAuto, _procOutputDir, _procGemModels, _procGemKeys, _procGemKeyInput, _addGemKeyBtn,
-            _procOcrProvider, _procVisionKey, _procVisionKeyEnv, _procOcrCmd, _procOllamaEndpoint, _procOllamaModel, _procPrompt, _saveConfigBtn)
+            _procEnableAuto, _procOutputDir, _procGemModels, _procGemKeys, _procGemKeyInput, _addGemKeyBtn, _procOcrProvider, _procVisionKey, _procVisionKeyEnv, _procOcrCmd, _procOllamaEndpoint, _procOllamaModel, _procPrompt, _saveConfigBtn)
             = BuildConfigControls();
 
         var tabVideo = new TabPage("Video") { Padding = new Padding(8) };

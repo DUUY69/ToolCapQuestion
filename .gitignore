@@ -67,6 +67,7 @@ Outputs/
 # Config files with sensitive data (keep templates)
 # Note: processing-settings.json may contain API keys, so it's ignored
 # Users should copy from .example files
+CaptureRegionApp/Config/processing-settings.json
 CaptureRegionApp/bin/**/Config/processing-settings.json
 TestAi/bin/**/Config/processing-settings.json
 
