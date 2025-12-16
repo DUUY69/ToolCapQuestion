@@ -543,12 +543,16 @@ public sealed class CapturePipeline
             var name = Path.GetFileNameWithoutExtension(item.ImagePath);
             var jsonPath = Path.Combine(outputDir, $"{name}_ocr.json");
 
+            var meta = ExtractQuestionMeta(item.OcrText);
+
             var payload = new
             {
                 item.FileName,
                 item.ImagePath,
                 OcrText = item.OcrText,
                 LowConfidence = item.LowConfidence,
+                QuestionNumber = meta.QuestionNumber,
+                QuestionId = meta.QuestionId,
                 EnqueuedAt = DateTime.UtcNow
             };
 
