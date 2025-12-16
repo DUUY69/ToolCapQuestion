@@ -26,6 +26,8 @@ public sealed class ControlPanelForm : Form
     private readonly ListView _resultsList;
     private readonly TextBox _questionBox;
     private readonly TextBox _answerBox;
+    private readonly TextBox _metaNumberBox; // Cho phép chỉnh sửa QuestionNumber (STT câu hỏi, vd: 3/50)
+    private readonly TextBox _metaIdBox;     // Cho phép chỉnh sửa QuestionId (mã câu hỏi, vd: [213153])
     private readonly PictureBox _resultPreview;
     private readonly ContextMenuStrip _resultsMenu;
     private AnswerResult? _currentEditingResult; // Kết quả đang được chỉnh sửa
@@ -121,6 +123,18 @@ public sealed class ControlPanelForm : Form
             Font = new Font(Font.FontFamily, 10, FontStyle.Bold)
         };
 
+        // Ô nhập meta (STT & Mã câu hỏi)
+        _metaNumberBox = new TextBox
+        {
+            Width = 80,
+            PlaceholderText = "Câu số (vd: 3/50)"
+        };
+        _metaIdBox = new TextBox
+        {
+            Width = 120,
+            PlaceholderText = "Mã (vd: [213153])"
+        };
+
         _resultPreview = new PictureBox
         {
             Dock = DockStyle.Fill,
@@ -210,25 +224,50 @@ public sealed class ControlPanelForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
-            RowCount = 5,
+            RowCount = 6,
             Padding = new Padding(6),
             AutoSize = false
         };
         detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         detailLayout.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-        detailLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // label câu hỏi + lựa chọn
-        detailLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 60));  // box câu hỏi + lựa chọn
-        detailLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // label đáp án
-        detailLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 40));  // box đáp án
-        detailLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));     // nút Lưu
+        // Hàng 0: meta (Mã/Câu số)
+        detailLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        // Hàng 1: label câu hỏi
+        detailLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        // Hàng 2: box câu hỏi
+        detailLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 60));
+        // Hàng 3: label đáp án
+        detailLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        // Hàng 4: box đáp án
+        detailLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 40));
+        // Hàng 5: nút Lưu
+        detailLayout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        detailLayout.Controls.Add(new Label { Text = "Câu hỏi + Lựa chọn (kèm Mã/Câu số nếu có)", AutoSize = true, Font = new Font(Font, FontStyle.Bold) }, 0, 0);
+        // Hàng meta: label + 2 ô nhập
+        var metaPanel = new FlowLayoutPanel
+        {
+            FlowDirection = FlowDirection.LeftToRight,
+            AutoSize = true,
+            Dock = DockStyle.Fill
+        };
+        metaPanel.Controls.Add(new Label { Text = "Câu số:", AutoSize = true, Padding = new Padding(0, 6, 4, 0) });
+        metaPanel.Controls.Add(_metaNumberBox);
+        metaPanel.Controls.Add(new Label { Text = "Mã:", AutoSize = true, Padding = new Padding(8, 6, 4, 0) });
+        metaPanel.Controls.Add(_metaIdBox);
+        detailLayout.Controls.Add(metaPanel, 0, 0);
+        detailLayout.SetColumnSpan(metaPanel, 2);
+
+        // Hàng label câu hỏi
+        detailLayout.Controls.Add(new Label { Text = "Câu hỏi + Lựa chọn", AutoSize = true, Font = new Font(Font, FontStyle.Bold) }, 0, 1);
         detailLayout.SetColumnSpan(detailLayout.Controls[detailLayout.Controls.Count - 1], 2);
-        detailLayout.Controls.Add(_questionBox, 0, 1);
+        // Hàng box câu hỏi
+        detailLayout.Controls.Add(_questionBox, 0, 2);
         detailLayout.SetColumnSpan(_questionBox, 2);
-        detailLayout.Controls.Add(new Label { Text = "Đáp án", AutoSize = true, Font = new Font(Font, FontStyle.Bold) }, 0, 2);
+        // Hàng label đáp án
+        detailLayout.Controls.Add(new Label { Text = "Đáp án", AutoSize = true, Font = new Font(Font, FontStyle.Bold) }, 0, 3);
         detailLayout.SetColumnSpan(detailLayout.Controls[detailLayout.Controls.Count - 1], 2);
-        detailLayout.Controls.Add(_answerBox, 0, 3);
+        // Hàng box đáp án
+        detailLayout.Controls.Add(_answerBox, 0, 4);
         detailLayout.SetColumnSpan(_answerBox, 2);
 
         // Nút Lưu và Xem log ở hàng cuối
@@ -398,7 +437,9 @@ public sealed class ControlPanelForm : Form
         var seenImages = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // Đảm bảo mỗi ảnh chỉ có một JSON
         var seenContent = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // Đảm bảo không trùng nội dung
 
-        int idx = 1;
+        // Danh sách kết quả hợp lệ sau khi dedup, sẽ sort theo thời gian tăng dần để hiển thị
+        var validResults = new List<AnswerResult>();
+
         foreach (var file in files)
         {
             try
@@ -483,8 +524,8 @@ public sealed class ControlPanelForm : Form
                         // Đánh dấu đã thấy
                         seenImages.Add(imageKey);
                         seenContent.Add(contentKey);
-                        
-                        AddResultItem(r, idx++);
+
+                        validResults.Add(r);
                     }
                     else
                     {
@@ -511,13 +552,19 @@ public sealed class ControlPanelForm : Form
             }
         }
 
-        _resultsList.EndUpdate();
+        // Sắp xếp theo CreatedAt tăng dần để bảng hiển thị đúng thứ tự thời gian
+        var ordered = validResults
+            .OrderBy(r => r.CreatedAt)
+            .ThenBy(r => r.FileName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        // Cập nhật lại STT cho tất cả items để đảm bảo đồng bộ
-        for (int i = 0; i < _resultsList.Items.Count; i++)
+        int idx = 1;
+        foreach (var r in ordered)
         {
-            _resultsList.Items[i].SubItems[0].Text = (i + 1).ToString();
+            AddResultItem(r, idx++);
         }
+
+        _resultsList.EndUpdate();
 
         // Auto-size cột dựa trên nội dung
         AutoSizeResultColumns();
@@ -823,6 +870,8 @@ public sealed class ControlPanelForm : Form
         }
 
         // Load nội dung
+        _metaNumberBox.Text = r.QuestionNumber;
+        _metaIdBox.Text = r.QuestionId;
         var opts = FormatOptions(r.Options);
         _questionBox.Text = string.IsNullOrWhiteSpace(opts)
             ? r.Question
@@ -891,6 +940,8 @@ public sealed class ControlPanelForm : Form
             }
 
             // Cập nhật AnswerResult
+            _currentEditingResult.QuestionNumber = _metaNumberBox.Text.Trim();
+            _currentEditingResult.QuestionId = _metaIdBox.Text.Trim();
             _currentEditingResult.Question = question;
             _currentEditingResult.Options = options;
             _currentEditingResult.AnswerText = answerText;

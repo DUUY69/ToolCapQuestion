@@ -110,9 +110,10 @@ public sealed class ResultsForm : Form
                 }
             }
 
+            // Sắp xếp theo thời gian tăng dần (cũ → mới) để khớp trực quan với cột "Thời gian"
             results = results
-                .OrderByDescending(r => r.CreatedAt)
-                .ThenByDescending(r => r.FileName)
+                .OrderBy(r => r.CreatedAt)
+                .ThenBy(r => r.FileName)
                 .ToList();
 
             _listView.BeginUpdate();

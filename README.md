@@ -58,14 +58,26 @@ Hoặc double-click `build-and-run.bat`
 
 ## Sử Dụng
 
-1. **Chụp vùng tùy chọn:** Nhấn `Ctrl+Q`, kéo chuột chọn vùng, nhấn "Lưu"
-2. **Chụp vùng cố định:** Nhấn `Ctrl+W` (cần cấu hình trước bằng `Ctrl+E`)
-3. **Xem kết quả:** Kết quả hiển thị trên Console window
+1. **Chụp vùng tùy chọn:** Nhấn `Ctrl+Q`, kéo chuột chọn vùng, nhấn "Lưu".
+2. **Chụp vùng cố định:** Nhấn `Ctrl+W` (cần cấu hình trước bằng `Ctrl+E`).
+3. **Xem & chỉnh kết quả:**
+   - Mở cửa sổ `Bảng điều khiển (Xem ảnh/Config)` → tab **Kết quả** để xem danh sách câu hỏi, ảnh, đáp án.
+   - Chọn một dòng để xem chi tiết bên phải: ảnh, **Câu số (QuestionNumber)**, **Mã (QuestionId)**, nội dung câu hỏi + lựa chọn và đáp án.
+   - Có thể chỉnh sửa câu hỏi, lựa chọn, đáp án, **Câu số** và **Mã**, sau đó bấm **Lưu** để ghi lại vào file `*_result.json`.
+   - Dùng nút **“Xuất TXT (tất cả)”** để xuất toàn bộ kết quả ra file `results.txt` (bao gồm Câu số/Mã đã chỉnh).
 
 ## Cấu Hình
 
-- `CaptureRegionApp/Config/capture-settings.json` - Cấu hình chụp ảnh
-- `CaptureRegionApp/Config/processing-settings.json` - Cấu hình AI và OCR
+- `CaptureRegionApp/Config/capture-settings.json`  
+  - Cấu hình chụp ảnh (hotkey, vùng cố định, thư mục `Captures`).
+- `CaptureRegionApp/Config/processing-settings.json`  
+  - Cấu hình AI, OCR, thư mục `Outputs`, danh sách `GeminiModels` và `GeminiApiKeys`, prompt xử lý.
+  - File thật **không nằm trong repo** – bạn copy từ file mẫu:
+    ```bash
+    copy CaptureRegionApp\Config\capture-settings.json.example CaptureRegionApp\Config\capture-settings.json
+    copy CaptureRegionApp\Config\processing-settings.json.example CaptureRegionApp\Config\processing-settings.json
+    ```
+  - Sau đó chỉnh bằng tay hoặc qua tab **Cấu hình** trong `Bảng điều khiển`.
 
 ## Tài Liệu
 
@@ -73,9 +85,17 @@ Xem file [HUONG_DAN_SU_DUNG.md](HUONG_DAN_SU_DUNG.md) để biết hướng dẫ
 
 ## Lưu Ý Bảo Mật
 
-⚠️ **QUAN TRỌNG:** File `processing-settings.json` có thể chứa API Key. Không commit file này lên public repository nếu chứa API Key thật.
+⚠️ **QUAN TRỌNG:** Các file:
 
-File `.gitignore` đã được cấu hình để bỏ qua các file nhạy cảm. Sử dụng file `.example` làm mẫu.
+- `CaptureRegionApp/Config/processing-settings.json`
+- `CaptureRegionApp/Config/capture-settings.json`
+
+có thể chứa API Key và cấu hình cá nhân.  
+File `.gitignore` đã được cấu hình để **bỏ qua** chúng; chỉ các file `*.example` được track.  
+Luôn:
+
+- Lấy API key mới nếu key cũ từng bị public.
+- Đặt key thật qua file local hoặc biến môi trường (ví dụ `GEMINI_API_KEY`, `GOOGLE_VISION_API_KEY`), **không commit lên GitHub**.
 
 ## License
 
