@@ -65,9 +65,10 @@ Outputs/
 *.log
 
 # Config files with sensitive data (keep templates)
-# Note: processing-settings.json may contain API keys, so it's ignored
+# Note: these JSON files có thể chứa API key hoặc cấu hình cá nhân, chỉ track bản .example
 # Users should copy from .example files
 CaptureRegionApp/Config/processing-settings.json
+CaptureRegionApp/Config/capture-settings.json
 CaptureRegionApp/bin/**/Config/processing-settings.json
 TestAi/bin/**/Config/processing-settings.json
 
