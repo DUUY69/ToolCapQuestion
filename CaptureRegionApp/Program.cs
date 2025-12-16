@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Windows.Forms;
 using CaptureRegionApp.Processing;
+using CaptureRegionApp.Processing.Models;
 
 namespace CaptureRegionApp;
 
@@ -15,6 +16,14 @@ internal static class Program
     // 2 = Per Monitor DPI Aware
     [DllImport("Shcore.dll", SetLastError = true)]
     private static extern int SetProcessDpiAwareness(int value);
+
+    public static string GetProjectRoot()
+    {
+        // AppContext.BaseDirectory trỏ tới bin/Debug/net8.0-windows/
+        // Lùi 3 cấp để về thư mục project gốc (chứa Config, Captures, Outputs)
+        var root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", ".."));
+        return root;
+    }
 
     [STAThread]
     private static void Main()
@@ -135,6 +144,9 @@ public class CaptureAppContext : ApplicationContext
     private readonly CaptureSettings _settings;
     private readonly CapturePipeline? _pipeline;
     private readonly PendingWatcher? _watcher;
+    private readonly string _outputDir;
+    private ResultsForm? _resultsForm;
+    private ControlPanelForm? _controlPanelForm;
     private readonly NotifyIcon _trayIcon;
     private readonly HotkeyWindow _hotkeyWindow;
     private bool _isCapturing;
@@ -144,6 +156,7 @@ public class CaptureAppContext : ApplicationContext
         _settings = settings;
         _pipeline = pipeline;
         _watcher = watcher;
+        _outputDir = settings.GetOutputDirectory();
 
         _trayIcon = new NotifyIcon
         {
@@ -154,6 +167,7 @@ public class CaptureAppContext : ApplicationContext
         };
 
         _trayIcon.DoubleClick += (_, _) => TriggerCapture();
+        _trayIcon.Click += (_, _) => ShowControlPanel(); // Click icon để mở bảng điều khiển cho dễ thấy
 
         _hotkeyWindow = new HotkeyWindow(_settings);
         _hotkeyWindow.Register(new[]
@@ -170,6 +184,8 @@ public class CaptureAppContext : ApplicationContext
         menu.Items.Add("Chụp (Ctrl+Q)", null, (_, _) => TriggerCapture());
         menu.Items.Add("Chụp vùng cố định (Ctrl+W)", null, (_, _) => TriggerFixedCapture(showPreview: false));
         menu.Items.Add("Chọn vùng cố định mới & khởi động lại (Ctrl+E)", null, (_, _) => ConfigureFixedRegionAndRestart());
+        menu.Items.Add("Mở cửa sổ kết quả", null, (_, _) => ShowResults());
+        menu.Items.Add("Bảng điều khiển (Xem ảnh/Config)", null, (_, _) => ShowControlPanel());
         menu.Items.Add("Thoát", null, (_, _) => ExitThread());
         return menu;
     }
@@ -333,8 +349,32 @@ public class CaptureAppContext : ApplicationContext
         _trayIcon.Visible = false;
         _trayIcon.Dispose();
         _watcher?.Dispose();
+        _resultsForm?.Close();
+        _controlPanelForm?.Close();
         _hotkeyWindow.DestroyHandle();
         base.ExitThreadCore();
+    }
+
+    private void ShowResults()
+    {
+        if (_resultsForm == null || _resultsForm.IsDisposed)
+        {
+            _resultsForm = new ResultsForm(_outputDir);
+        }
+
+        _resultsForm.Show();
+        _resultsForm.BringToFront();
+    }
+
+    private void ShowControlPanel()
+    {
+        if (_controlPanelForm == null || _controlPanelForm.IsDisposed)
+        {
+            _controlPanelForm = new ControlPanelForm();
+        }
+
+        _controlPanelForm.Show();
+        _controlPanelForm.BringToFront();
     }
 
     private void SaveCapturedImage(Image image)
@@ -521,7 +561,7 @@ public sealed class CaptureSettings
 
     public static CaptureSettings Load()
     {
-        var baseDir = AppContext.BaseDirectory;
+        var baseDir = Program.GetProjectRoot();
         var configPath = Path.Combine(baseDir, "Config", "capture-settings.json");
 
         if (!File.Exists(configPath))
@@ -547,17 +587,14 @@ public sealed class CaptureSettings
     {
         if (!string.IsNullOrWhiteSpace(OutputDirectory))
         {
-            // Nếu là đường dẫn tuyệt đối, dùng trực tiếp
             if (Path.IsPathRooted(OutputDirectory))
             {
                 return Path.GetFullPath(OutputDirectory);
             }
-            // Nếu là đường dẫn tương đối, kết hợp với BaseDirectory
-            return Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, OutputDirectory));
+            return Path.GetFullPath(Path.Combine(Program.GetProjectRoot(), OutputDirectory));
         }
 
-        // Mặc định lưu vào thư mục "Captures" cạnh file thực thi
-        return Path.Combine(AppContext.BaseDirectory, "Captures");
+        return Path.Combine(Program.GetProjectRoot(), "Captures");
     }
 
     public Rectangle GetFixedRegionRect()
@@ -567,7 +604,7 @@ public sealed class CaptureSettings
 
     public static void Save(CaptureSettings settings)
     {
-        var baseDir = AppContext.BaseDirectory;
+        var baseDir = Program.GetProjectRoot();
         var configDir = Path.Combine(baseDir, "Config");
         Directory.CreateDirectory(configDir);
         var configPath = Path.Combine(configDir, "capture-settings.json");

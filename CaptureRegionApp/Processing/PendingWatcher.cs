@@ -17,7 +17,6 @@ public sealed class PendingWatcher : IDisposable
     private readonly string _resultDir;
     private readonly TimeSpan _interval;
     private readonly ConcurrentDictionary<string, byte> _inFlight = new();
-    private readonly SemaphoreSlim _processingSemaphore = new(1, 1); // Chỉ cho phép 1 file xử lý tại một thời điểm
     private Timer? _timer;
     private bool _disposed;
 
@@ -38,6 +37,9 @@ public sealed class PendingWatcher : IDisposable
 
     private async Task OnTickAsync()
     {
+        // Đảm bảo có await để tránh cảnh báo CS1998
+        await Task.Yield();
+
         if (_disposed)
         {
             return;
@@ -55,6 +57,12 @@ public sealed class PendingWatcher : IDisposable
 
         foreach (var file in files)
         {
+            // Bỏ qua các file tiền xử lý cho OCR (_ocrprep) để tránh xử lý lặp vô hạn
+            if (file.EndsWith("_ocrprep.png", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             var name = Path.GetFileNameWithoutExtension(file);
             var resultJson = Path.Combine(_resultDir, $"{name}_result.json");
             var processedMarker = Path.Combine(_resultDir, $"{name}.processed");
@@ -65,25 +73,11 @@ public sealed class PendingWatcher : IDisposable
                 continue;
             }
 
-            if (!_inFlight.TryAdd(file, 0))
+            if (_inFlight.TryAdd(file, 0))
             {
-                continue; // đã/đang xử lý
+                // Đưa vào hàng đợi xử lý (đã có worker của pipeline đảm bảo thứ tự)
+                _ = _pipeline.ProcessAsync(file).ConfigureAwait(false);
             }
-
-            // Xử lý tuần tự - đợi semaphore để đảm bảo chỉ xử lý 1 file tại một thời điểm
-            _ = Task.Run(async () =>
-            {
-                await _processingSemaphore.WaitAsync().ConfigureAwait(false);
-                try
-                {
-                    await _pipeline.ProcessAsync(file).ConfigureAwait(false);
-                }
-                finally
-                {
-                    _inFlight.TryRemove(file, out _);
-                    _processingSemaphore.Release();
-                }
-            });
         }
     }
 
@@ -92,7 +86,6 @@ public sealed class PendingWatcher : IDisposable
         if (_disposed) return;
         _disposed = true;
         _timer?.Dispose();
-        _processingSemaphore?.Dispose();
     }
 }
 

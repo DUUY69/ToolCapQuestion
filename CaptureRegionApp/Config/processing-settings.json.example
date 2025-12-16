@@ -1,12 +1,29 @@
 {
   "EnableAutoAnswer": true,
-  "PromptPrefix": "Bạn là trợ lý trả lời đề kiểm tra. Đọc kỹ nội dung OCR từ ảnh chụp câu hỏi trắc nghiệm.\n\n⚠️ QUAN TRỌNG - SỬA LỖI OCR BẮT BUỘC:\nOCR có nhiều lỗi. Bạn PHẢI sửa TẤT CẢ lỗi OCR trước khi trả lời. Ví dụ lỗi phổ biến:\n- 'qun' → 'gun'\n- 'zor' → 'Razor'\n- 'Pogetoda' → 'PageModel'\n- 'ist' → 'first'\n- 'outine' → 'outline'\n- 'Catele' → 'Controller'\n- 'Vietfode' → 'ViewModel'\n- 'Adetabscosntty' → 'A database entity'\n- 'Pamswork' → 'Framework'\n- 'Areslacament' → 'A replacement'\n\nQUY TRÌNH:\n1. Đọc toàn bộ OCR text\n2. SỬA TẤT CẢ lỗi OCR dựa trên ngữ cảnh và từ vựng tiếng Anh\n3. Đảm bảo mọi từ đều có nghĩa và đúng chính tả\n4. Sau khi đã sửa xong, mới trả lời câu hỏi\n5. Chọn đáp án dựa trên nội dung ĐÃ SỬA, không phải nội dung OCR gốc\n\nTrích xuất và trả lời theo format JSON sau:\n{\n  \"questionNumber\": \"1/50\" hoặc null,\n  \"questionId\": \"[213153]\" hoặc null,\n  \"question\": \"nội dung câu hỏi ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n  \"options\": {\n    \"A\": \"nội dung lựa chọn A ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n    \"B\": \"nội dung lựa chọn B ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n    \"C\": \"nội dung lựa chọn C ĐÃ SỬA LỖI OCR (phải đúng chính tả)\",\n    \"D\": \"nội dung lựa chọn D ĐÃ SỬA LỖI OCR (phải đúng chính tả)\"\n  },\n  \"answer\": \"A\" (chọn dựa trên nội dung ĐÃ SỬA),\n  \"answerText\": \"A. nội dung đáp án ĐÃ SỬA LỖI OCR\"\n}\nChỉ trả về JSON, không thêm text khác.",
-  "GeminiModel": "gemini-2.5-flash",
-  "GeminiApiKey": "YOUR_GEMINI_API_KEY_HERE",
+  "PromptPrefix": "Bạn là trợ lý trả lời đề kiểm tra trắc nghiệm.\n\n⚠️ NGUYÊN TẮC BẮT BUỘC:\n- KHÔNG được đoán nội dung nếu OCR không đủ thông tin.\n- KHÔNG được trả lời nếu không thể sửa OCR một cách hợp lý.\n- Chỉ sử dụng thông tin có thể suy luận chắc chắn từ OCR.\n\n⚠️ NGÔN NGỮ:\n- KHÔNG được dịch câu hỏi/đáp án sang tiếng Việt nếu OCR ban đầu là tiếng Anh.\n- Luôn giữ nguyên NGÔN NGỮ gốc của câu hỏi và các lựa chọn (thường là tiếng Anh).\n\n⚠️ SỬA LỖI OCR (BẮT BUỘC):\nOCR có thể chứa lỗi nghiêm trọng. Bạn PHẢI sửa TẤT CẢ lỗi OCR dựa trên:\n- Ngữ cảnh câu hỏi\n- Thuật ngữ tiếng Anh phổ biến (IT / học thuật)\n- Cấu trúc câu hỏi trắc nghiệm\n\nVí dụ lỗi OCR phổ biến:\n- 'qun' → 'gun'\n- 'zor' → 'Razor'\n- 'Pogetoda' → 'PageModel'\n- 'ist' → 'first'\n- 'outine' → 'outline'\n- 'Catele' → 'Controller'\n- 'Vietfode' → 'ViewModel'\n- 'Adetabscosntty' → 'A database entity'\n- 'Pamswork' → 'Framework'\n- 'Areslacament' → 'A replacement'\n\n❌ LOẠI BỎ NỘI DUNG RÁC (BẮT BUỘC):\n- BỎ QUA toàn bộ thông tin giao diện thi: máy, student, thời gian, font, tổng điểm, nút Hoàn thành, Kế tiếp, Trình diễn, menu số 1 2 3 4 5...\n- BỎ QUA các dòng nhiễu OCR: dòng lặp lại, ký tự rời rạc, chữ không liên quan tới câu hỏi/đáp án.\n- CHỈ GIỮ lại block câu hỏi trắc nghiệm và các lựa chọn A/B/C/D có liên quan trực tiếp tới câu hỏi.\n\n⚙️ QUY TRÌNH XỬ LÝ (NỘI BỘ):\n1. Đọc toàn bộ OCR text.\n2. Loại bỏ hoàn toàn nội dung rác (UI, nhiễu) và sửa tất cả lỗi OCR còn lại để tạo phiên bản văn bản hợp lệ.\n3. Kiểm tra: nếu không thể sửa đầy đủ → trả về answer = null.\n4. Phân tích câu hỏi dựa trên nội dung ĐÃ SỬA (sau khi đã loại bỏ nội dung rác).\n5. Chọn đáp án đúng.\n\n📤 OUTPUT (BẮT BUỘC JSON THUẦN):\n- Luôn giữ nguyên questionNumber (ví dụ: \"7/50\") và questionId (ví dụ: \"[213135]\") nếu xuất hiện trong OCR; nếu không có thì để null, không được tự đoán.\n{\n  \"questionNumber\": \"1/50\" hoặc null,\n  \"questionId\": \"[213153]\" hoặc null,\n  \"question\": \"Nội dung câu hỏi ĐÃ SỬA LỖI OCR (đúng chính tả, đã loại bỏ rác)\",\n  \"options\": {\n    \"A\": \"Nội dung lựa chọn A đã sửa\",\n    \"B\": \"Nội dung lựa chọn B đã sửa\",\n    \"C\": \"Nội dung lựa chọn C đã sửa\",\n    \"D\": \"Nội dung lựa chọn D đã sửa\"\n  },\n  \"answer\": \"A\" hoặc null,\n  \"answerText\": \"A. Nội dung đáp án đã sửa\" hoặc null\n}\n\nChỉ trả về JSON. Không thêm giải thích."
+  "GeminiModels": [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite"
+  ],
+  "GeminiModel": "",
+  "GeminiApiKeys": [
+    "YOUR_GEMINI_API_KEY_1",
+    "YOUR_GEMINI_API_KEY_2"
+  ],
+  "GeminiApiKey": "",
   "GeminiApiKeyEnv": "GEMINI_API_KEY",
   "OllamaEndpoint": "http://localhost:11434/api/generate",
   "OllamaModel": "qwen2.5:7b-instruct",
-  "OcrCommand": "tesseract \"{input}\" stdout -l eng --psm 6",
+  "OcrProvider": "googlevision",
+  "OcrCommand": "tesseract \"{input}\" stdout -l eng --psm 4 -c preserve_interword_spaces=1",
+  "PaddlePythonPath": "python",
+  "PaddleScriptPath": "Processing/Ocr/paddle_ocr_cli.py",
+  "PaddleLang": "en",
+  "PaddleUseAngleCls": true,
+  "GoogleVisionApiKey": "YOUR_GOOGLE_VISION_API_KEY",
+  "GoogleVisionApiKeyEnv": "GOOGLE_VISION_API_KEY",
   "OutputDirectory": "Outputs"
 }
+
+
 

@@ -35,14 +35,24 @@ tesseract --version
 ### 3. AI Service (Chọn một trong hai)
 
 #### Option A: Gemini AI (Khuyến nghị - miễn phí)
-1. Lấy API Key từ: https://aistudio.google.com/apikey
+1. Lấy API Key từ: https://aistudio.google.com/apikey (thêm bao nhiêu key tùy ý)
 2. Mở file `CaptureRegionApp\Config\processing-settings.json`
-3. Thêm API Key vào `GeminiApiKey`:
+3. Thêm danh sách key vào `GeminiApiKeys` và danh sách model ưu tiên vào `GeminiModels` (ví dụ đã cấu hình sẵn):
 ```json
 {
-  "GeminiApiKey": "YOUR_API_KEY_HERE"
+  "GeminiModels": [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite"
+  ],
+  "GeminiApiKeys": [
+    "KEY1",
+    "KEY2",
+    "KEY3"
+  ],
+  "GeminiApiKeyEnv": "GEMINI_API_KEY"
 }
 ```
+4. Ứng dụng sẽ lần lượt thử từng model và từng key; khi tất cả key/model đều lỗi/hết quota mới fallback sang Ollama.
 
 #### Option B: Ollama (Local - cần cài đặt)
 1. Tải Ollama từ: https://ollama.ai
@@ -92,13 +102,11 @@ CaptureRegionApp\bin\Debug\net8.0-windows\CaptureRegionApp.exe
 - Ứng dụng sẽ tự động khởi động lại sau khi cấu hình
 
 ### 3. Xem kết quả
-- Kết quả sẽ hiển thị trong Console window
-- Format hiển thị:
-  - Câu hỏi: Số thứ tự (nếu có)
-  - Mã: Mã câu hỏi (nếu có)
-  - Câu hỏi: Nội dung câu hỏi
-  - Các lựa chọn: A, B, C, D với nội dung đầy đủ
-  - Đáp án: Đáp án kèm nội dung
+- Kết quả được lưu thành file JSON tại `Outputs/xxx_result.json`
+- Ảnh chụp lưu tại thư mục `Captures/`
+- Có thể mở UI để xem:
+  - Click icon ở system tray → chọn `Mở cửa sổ kết quả`
+  - Hoặc mở `Bảng điều khiển (Xem ảnh/Config)` để xem Kết quả, Ảnh đã chụp, và sửa cấu hình
 
 ## Cấu Hình
 
@@ -118,6 +126,7 @@ CaptureRegionApp\bin\Debug\net8.0-windows\CaptureRegionApp.exe
   "OutputDirectory": "Outputs"  // Thư mục lưu kết quả (tương đối)
 }
 ```
+- Có thể chỉnh cấu hình trong UI: `Bảng điều khiển (Xem ảnh/Config)` → tab Cấu hình → Lưu (cần khởi động lại app để áp dụng)
 
 **capture-settings.json:**
 ```json
