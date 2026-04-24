@@ -1,52 +1,109 @@
-# ToolCapQuestion
+# ToolCapQuestions – CaptureRegionApp
 
-Ứng dụng tự động chụp ảnh câu hỏi trắc nghiệm, đọc nội dung bằng OCR (Tesseract), và sử dụng AI (Gemini/Ollama) để trả lời câu hỏi.
+Ứng dụng Windows chụp vùng màn hình, OCR tự động và trả lời câu hỏi trắc nghiệm bằng AI (Gemini / Ollama).
 
-## Tính Năng
+---
 
-- 📸 Chụp ảnh vùng tùy chọn hoặc vùng cố định
-- 🔍 OCR tự động đọc nội dung từ ảnh (Tesseract)
-- 🤖 Trả lời câu hỏi bằng AI (Gemini hoặc Ollama)
-- 🔧 Tự động sửa lỗi OCR phổ biến
-- 📊 Hiển thị kết quả chi tiết trên Console
+## Yêu cầu hệ thống
 
-## Yêu Cầu
+- Windows 10/11 (64-bit)
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Python 3.8+ (nếu dùng PaddleOCR)
 
-- .NET 8.0 SDK
-- Tesseract OCR
-- AI Service: Gemini API Key hoặc Ollama (local)
+---
 
-## Cài Đặt Nhanh
+## Cài đặt
 
-### 1. Cài đặt Tesseract OCR
+### 1. Clone repo
 
-**Windows (winget):**
-```powershell
-winget install --id UB-Mannheim.TesseractOCR
+```bash
+git clone https://github.com/DUUY69/ToolCapQuestions.git
+cd ToolCapQuestions
 ```
 
-**Windows (Chocolatey):**
-```powershell
-choco install tesseract
+### 2. Cấu hình file config
+
+Copy các file example trong thư mục `CaptureRegionApp/Config/`:
+
+```bash
+copy CaptureRegionApp\Config\capture-settings.json.example     CaptureRegionApp\Config\capture-settings.json
+copy CaptureRegionApp\Config\processing-settings.json.example  CaptureRegionApp\Config\processing-settings.json
 ```
 
-### 2. Cấu hình API Key
+Sau đó chỉnh sửa theo hướng dẫn bên dưới.
 
-1. Copy file mẫu:
-   ```bash
-   copy CaptureRegionApp\Config\processing-settings.json.example CaptureRegionApp\Config\processing-settings.json
-   ```
+---
 
-2. Mở `CaptureRegionApp\Config\processing-settings.json` và thêm Gemini API Key:
-   ```json
-   {
-     "GeminiApiKey": "YOUR_API_KEY_HERE"
-   }
-   ```
+## Cấu hình
 
-   Hoặc lấy API Key từ: https://aistudio.google.com/apikey
+### `capture-settings.json`
 
-### 3. Build và Chạy
+| Trường | Mô tả | Mặc định |
+|---|---|---|
+| `OverlayOpacity` | Độ mờ overlay khi chụp (0.0 – 1.0) | `0.2` |
+| `OutputDirectory` | Thư mục lưu ảnh chụp | `Captures` |
+| `Hotkey` | Phím tắt chụp tự do | `Ctrl+Q` |
+| `FixedRegionHotkey` | Phím tắt chụp vùng cố định | `Ctrl+W` |
+| `FixedRegionConfirmHotkey` | Phím tắt chọn lại vùng cố định | `Ctrl+E` |
+| `FixedRegionX/Y/Width/Height` | Tọa độ và kích thước vùng cố định | `0,0,400,200` |
+
+### `processing-settings.json`
+
+| Trường | Mô tả |
+|---|---|
+| `OcrProvider` | OCR engine: `googlevision` / `tesseract` / `paddle` |
+| `GoogleVisionApiKey` | API key Google Cloud Vision |
+| `GeminiApiKeys` | Danh sách Gemini API key (dùng xoay vòng) |
+| `GeminiModels` | Danh sách model Gemini ưu tiên |
+| `OllamaEndpoint` | Endpoint Ollama nếu dùng local AI |
+| `OllamaModel` | Model Ollama (ví dụ: `qwen2.5:7b-instruct`) |
+| `OutputDirectory` | Thư mục lưu kết quả OCR/AI | 
+| `EnableAutoAnswer` | Bật/tắt tự động gửi AI | `true` |
+
+---
+
+## Lấy API Key
+
+### Google Cloud Vision (OCR)
+1. Vào [Google Cloud Console](https://console.cloud.google.com/)
+2. Tạo project → Enable **Cloud Vision API**
+3. Tạo **API Key** tại `APIs & Services > Credentials`
+4. Điền vào `GoogleVisionApiKey` trong `processing-settings.json`
+
+### Gemini AI
+1. Vào [Google AI Studio](https://aistudio.google.com/app/apikey)
+2. Tạo API key
+3. Điền vào mảng `GeminiApiKeys` trong `processing-settings.json`
+
+> Có thể thêm nhiều key để tránh rate limit — app sẽ tự xoay vòng.
+
+---
+
+## Cài đặt OCR (chọn 1 trong 3)
+
+### Option A – Google Vision (khuyến nghị, không cần cài thêm)
+Chỉ cần điền `GoogleVisionApiKey`, set `"OcrProvider": "googlevision"`.
+
+### Option B – Tesseract
+```bash
+# Tải installer tại: https://github.com/UB-Mannheim/tesseract/wiki
+# Sau khi cài, thêm vào PATH, rồi set:
+"OcrProvider": "tesseract"
+"OcrCommand": "tesseract \"{input}\" stdout -l eng --psm 4"
+```
+
+### Option C – PaddleOCR
+```bash
+pip install paddlepaddle paddleocr
+# set trong processing-settings.json:
+"OcrProvider": "paddle"
+"PaddlePythonPath": "python"
+"PaddleScriptPath": "Processing/Ocr/paddle_ocr_cli.py"
+```
+
+---
+
+## Build & Chạy
 
 ```bash
 cd CaptureRegionApp
@@ -54,60 +111,54 @@ dotnet build
 dotnet run
 ```
 
-Hoặc double-click `build-and-run.bat`
+Hoặc build release:
 
-## Sử Dụng
+```bash
+dotnet publish -c Release -r win-x64 --self-contained
+```
 
-1. **Chụp vùng tùy chọn:** Nhấn `Ctrl+Q`, kéo chuột chọn vùng, nhấn "Lưu".
-2. **Chụp vùng cố định:** Nhấn `Ctrl+W` (cần cấu hình trước bằng `Ctrl+E`).
-3. **Xem & chỉnh kết quả:**
-   - Mở cửa sổ `Bảng điều khiển (Xem ảnh/Config)` → tab **Kết quả** để xem danh sách câu hỏi, ảnh, đáp án.
-   - Chọn một dòng để xem chi tiết bên phải: ảnh, **Câu số (QuestionNumber)**, **Mã (QuestionId)**, nội dung câu hỏi + lựa chọn và đáp án.
-   - Có thể chỉnh sửa câu hỏi, lựa chọn, đáp án, **Câu số** và **Mã**, sau đó bấm **Lưu** để ghi lại vào file `*_result.json`.
-   - Dùng nút **“Xuất TXT (tất cả)”** để xuất toàn bộ kết quả ra file `results.txt` (bao gồm Câu số/Mã đã chỉnh).
+App chạy dưới dạng **system tray** — icon xuất hiện ở góc phải taskbar.
 
-## Cấu Hình
+---
 
-- `CaptureRegionApp/Config/capture-settings.json`  
-  - Cấu hình chụp ảnh (hotkey, vùng cố định, thư mục `Captures`).
-- `CaptureRegionApp/Config/processing-settings.json`  
-  - Cấu hình AI, OCR, thư mục `Outputs`, danh sách `GeminiModels` và `GeminiApiKeys`, prompt xử lý.
-  - File thật **không nằm trong repo** – bạn copy từ file mẫu:
-    ```bash
-    copy CaptureRegionApp\Config\capture-settings.json.example CaptureRegionApp\Config\capture-settings.json
-    copy CaptureRegionApp\Config\processing-settings.json.example CaptureRegionApp\Config\processing-settings.json
-    ```
-  - Sau đó chỉnh bằng tay hoặc qua tab **Cấu hình** trong `Bảng điều khiển`.
+## Sử dụng
 
-## Tài Liệu
+| Thao tác | Mô tả |
+|---|---|
+| `Ctrl+Q` | Chụp vùng tự chọn (kéo chuột) |
+| `Ctrl+W` | Chụp vùng cố định đã cấu hình |
+| `Ctrl+E` | Chọn lại vùng cố định mới |
+| Click icon tray | Mở bảng điều khiển |
+| Double-click icon tray | Chụp ngay |
 
-Xem file [HUONG_DAN_SU_DUNG.md](HUONG_DAN_SU_DUNG.md) để biết hướng dẫn chi tiết.
+Sau khi chụp, app tự động:
+1. OCR ảnh → trích xuất text câu hỏi
+2. Gửi lên Gemini/Ollama → nhận đáp án
+3. Hiển thị kết quả trong cửa sổ Results
 
-## Lưu Ý Bảo Mật
+---
 
-⚠️ **QUAN TRỌNG:** Các file:
+## Lưu ý Windows Defender
 
-- `CaptureRegionApp/Config/processing-settings.json`
-- `CaptureRegionApp/Config/capture-settings.json`
+File `apphost.exe` trong thư mục `obj/` và `bin/` là file do .NET SDK tự sinh ra — **không phải virus**. Nếu bị chặn (lỗi `0x800700E1`), thêm exclusion:
 
-có thể chứa API Key và cấu hình cá nhân.  
-File `.gitignore` đã được cấu hình để **bỏ qua** chúng; chỉ các file `*.example` được track.  
-Luôn:
+`Windows Security > Virus & threat protection > Manage settings > Exclusions > Add folder`
 
-- Lấy API key mới nếu key cũ từng bị public.
-- Đặt key thật qua file local hoặc biến môi trường (ví dụ `GEMINI_API_KEY`, `GOOGLE_VISION_API_KEY`), **không commit lên GitHub**.
+Thêm thư mục gốc của project vào danh sách loại trừ.
 
-## License
+---
 
-MIT
+## Cấu trúc thư mục
 
-## Tác Giả
-
-DUUY69
-
-
-
-
-
-
-
+```
+CaptureRegionApp/
+├── Config/
+│   ├── capture-settings.json          ← cấu hình chụp màn hình
+│   └── processing-settings.json       ← cấu hình OCR + AI
+├── Processing/
+│   ├── Ocr/                           ← các OCR provider
+│   ├── Ai/                            ← Gemini / Ollama client
+│   └── Models/                        ← data models
+├── Captures/                          ← ảnh chụp (tự tạo khi chạy)
+└── Outputs/                           ← kết quả OCR + AI (tự tạo khi chạy)
+```
